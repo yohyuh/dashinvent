@@ -3,6 +3,7 @@ from pathlib import Path
 import sqlite3
 
 import streamlit as st
+
 import altair as alt
 import pandas as pd
 
@@ -54,7 +55,7 @@ def initialize_data(conn):
             (item_name, price, units_sold, units_left, cost_price, reorder_point, description)
         VALUES
             -- Beverages
-            ('Bottled Water (500ml)', 1.50, 115, 15, 0.80, 16, 'Hydrating bottled water'),
+            ('Bottled Water (500ml)', 0.50, 115, 15, 0.80, 16, 'Hydrating bottled water'),
             ('Soda (355ml)', 2.00, 93, 8, 1.20, 10, 'Carbonated soft drink'),
             ('Energy Drink (250ml)', 2.50, 12, 18, 1.50, 8, 'High-caffeine energy drink'),
             ('Coffee (hot, large)', 2.75, 11, 14, 1.80, 5, 'Freshly brewed hot coffee'),
@@ -162,7 +163,16 @@ def update_data(conn, df, changes):
 
     conn.commit()
 
+# Authentication function
 
+def authenticate():
+  """Prompts user for username and password, checks against allowed users"""
+  username = st.text_input("Username:")
+  password = st.text_input("Password:", type="password")
+
+  # Replace with your actual authentication logic (e.g., database lookup)
+  allowed_users = {"admin": "12345", "kelvin": "Gorgy254"}
+  return username in allowed_users and allowed_users[username] == password
 # -----------------------------------------------------------------------------
 # Draw the actual page, starting with the inventory table.
 
@@ -204,13 +214,27 @@ edited_df = st.data_editor(
 
 has_uncommitted_changes = any(len(v) for v in st.session_state.inventory_table.values())
 
+# User authentication before commit button
+if authenticate():
+  has_uncommitted_changes = any(len(v) for v in st.session_state.inventory_table.values())
+  st.button(
+      'Commit Changes',
+      type='primary',
+      disabled=not has_uncommitted_changes,
+      # Update data in database
+      on_click=update_data,
+      args=(conn, df, st.session_state.inventory_table))
+else:
+  st.error("To commit changes, please try logging in with a valid username and password.")
+
 st.button(
-    'Commit changes',
-    type='primary',
-    disabled=not has_uncommitted_changes,
-    # Update data in database
-    on_click=update_data,
-    args=(conn, df, st.session_state.inventory_table))
+        'Commit Changes',
+        type='primary',
+        disabled=not has_uncommitted_changes,
+        # Update data in database
+        on_click=update_data,
+        args=(conn, df, st.session_state.inventory_table))
+
 
 
 # -----------------------------------------------------------------------------
